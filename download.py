@@ -1,13 +1,14 @@
 import requests
 from datetime import datetime, timedelta
+from os import path
 
-from config import start, end
+from config import start, end, delta
 
 start_time = datetime.strptime(start, '%Y-%m-%d %H:%M')
 end_time = datetime.strptime(end, '%Y-%m-%d %H:%M')
-delta = timedelta(minutes = 2)
+# delta = timedelta(minutes = 2)
 urlBase = "http://jsoc.stanford.edu/data/aia/synoptic"
-locPath = "/Users/lxy/Desktop/Rice/Su 2021/Solar_Weather_Forecast/data/SDOAIA"
+locPath = "/Users/lxy/Desktop/Rice/Su 21/Solar_Weather_Forecast/data/SDOAIA"
 
 time = start_time
 while time < end_time:
@@ -24,6 +25,10 @@ while time < end_time:
     myUrl = "/".join([urlBase,thisPath,thisFile ])
     myDest = "/".join([locPath, thisFile])
     # print(myDest)
+    
+    # Skip the file if downloaded
+    if path.isfile(myDest):
+        continue
     print(myUrl)
     myBits = requests.get(myUrl)
 
