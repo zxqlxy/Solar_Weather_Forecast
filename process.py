@@ -17,19 +17,19 @@ from sunpy.map.maputils import all_coordinates_from_map
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.ma as ma
-from numpy import savez_compressed, asarray
+from numpy import savez_compressed
 from datetime import datetime, timedelta
 from os import path
 
 
 from parse_label import parse_label
-from config import start, end, report_name, delta
+from config import start, end, report_name, delta, wavelength
 
-base = "/Users/lxy/Desktop/Rice/Su 21/Solar_Weather_Forecast/data/SDOAIA/"
+base = "/Users/lxy/Desktop/Rice/Su 21/Solar_Weather_Forecast/data/SDOAIA/" + wavelength + "/"
 start_time = datetime.strptime(start, '%Y-%m-%d %H:%M')
 end_time = datetime.strptime(end, '%Y-%m-%d %H:%M')
 urlBase = "http://jsoc.stanford.edu/data/aia/synoptic"
-locPath = "/Users/lxy/Desktop/Rice/Su 21/Solar_Weather_Forecast/data/SDOAIA"
+locPath = "/Users/lxy/Desktop/Rice/Su 21/Solar_Weather_Forecast/data/SDOAIA/" + wavelength + "/"
 count = (end_time - start_time) // delta            # number of data points
 
 def process(events, *argv):
@@ -37,10 +37,10 @@ def process(events, *argv):
 
     """
     print(argv)
-    filename = 'maps_1024.npz'
+    filename = 'maps_1024_{}.npz'.format(wavelength)
     label_file = 'label.npz'
     if "256" in argv:
-        filename = 'maps_256.npz'
+        filename = 'maps_256_{}.npz'.format(wavelength)
 
     src_list = np.zeros((count, 1024, 1024))
     tar_list = np.zeros((count,))
@@ -57,12 +57,13 @@ def process(events, *argv):
         mi = str(time.minute) if time.minute >= 10 else '0' + str(time.minute)
 
         tar = 0
-        thisFile = "AIA"+ yr + mo + da + "_" + ho + mi + "_0094.fits"
+        thisFile = "AIA"+ yr + mo + da + "_" + ho + mi + "_0{}.fits".format(wavelength)
 
         # Check if the file exists
         if not path.isfile(base + thisFile):
-            src_list[data_index] = np.zeros((1024, 1024))
-            tar_list[data_index] = 0
+            # impute using previous data 
+            src_list[data_index] = src_list[data_index - 1] # TODO
+            tar_list[data_index] = tar_list[data_index - 1]
             data_index += 1
             continue
 
@@ -73,7 +74,6 @@ def process(events, *argv):
             # data shape is (1024, 1024)
             # data, header = lis[1]
             data = smap094.data
-
 
             if "mask" in argv:
                 hpc_coords = all_coordinates_from_map(smap094)
@@ -117,18 +117,12 @@ def process(events, *argv):
             print(yr + mo + da + "_" + ho + mi)
             print(tar)
 
-            # if "normalize" in argv:
-            #     data = normalize(data)
-
             src_list[data_index] = data
             tar_list[data_index] = tar
             data_index += 1
 
         except FileNotFoundError:
             pass
-
-    # src_images = asarray(src_list)
-    # tar_images = asarray(tar_list)
 
     print(src_list.shape)
     print(tar_list.shape)
@@ -149,7 +143,7 @@ def downsample_256(src, *argv):
         src ([np.array]): array of size N, h, w
 
     Returns:
-        [type]: [description]
+        [np.array]: data downsized to 256 * 256
     """
 
     N,h,w = src.shape
@@ -199,5 +193,5 @@ def plot_day(yr: str, mo: str, da: str):
 if __name__ == "__main__":
     events = parse_label(report_name)
     # print(events)
-    process(events, "256", "mask", "normalize", "show", "saveFile")
+    process(events, "256", "mask", "normalize", "saveFile")
     # plot_day("2019", "03", "09")
