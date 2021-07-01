@@ -23,6 +23,8 @@ def download(myUrl, myDest):
     print(myUrl)
     myBits = requests.get(myUrl)
     t.sleep(1)
+    if myBits.status_code == 404:
+        return "file not exists"
 
     if myBits.status_code == 404:
         return 'file not exists'
@@ -54,10 +56,6 @@ def parellel(wavelength):
 
         myUrl = "/".join([urlBase,thisPath,thisFile])
         myDest = "\\".join([locPath, thisFile])
-
-        URLS.append(myUrl)
-        DEST.append(myDest)
-
 
     # 5 is a number that won't introduce max tries exceed error
     with ThreadPoolExecutor(max_workers = 10) as executor: 
