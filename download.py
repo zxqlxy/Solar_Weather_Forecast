@@ -26,9 +26,6 @@ def download(myUrl, myDest):
     if myBits.status_code == 404:
         return "file not exists"
 
-    if myBits.status_code == 404:
-        return 'file not exists'
-
     if len(myBits.content) > 500: # if files don't exist we get a short reply from the server: skip these
         myFile = open(myDest, "wb")
         myFile.write(myBits.content)
