@@ -35,6 +35,9 @@ def download(myUrl, myDest):
         return "file downlaod timed out"
 
 def parellel(wavelength):
+    """
+    Parellel running the download process
+    """
     URLS = []
     DEST = []
 
