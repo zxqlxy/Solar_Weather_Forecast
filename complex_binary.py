@@ -15,7 +15,7 @@ from torch import nn
 import matplotlib.pyplot as plt
 
 
-base = "/storage/hpc/work/sb28/xl73/"
+base = "/scratch/xl73/"
 
 """### Check Device
 
