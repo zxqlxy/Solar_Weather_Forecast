@@ -15,7 +15,6 @@ from torch import nn
 import matplotlib.pyplot as plt
 
 
-
 base = "/storage/hpc/work/sb28/xl73/"
 
 """### Check Device
@@ -85,7 +84,6 @@ class NeuralNetwork(nn.Module):
         out = self.end(out)
         out = torch.flatten(out, 1)
         out = self.fc(out)
-        out = nn.Sigmoid()(out)
         return out
 
 model = NeuralNetwork(5).to(device)
@@ -170,12 +168,7 @@ tss = TSS().cuda()
 
 import torch.optim as optim
 
-## Need to use weighted binary loss function for unbalanced dataset
-# pos_weight = torch.ones([1])*4
-# pos_weight = pos_weight.to(device)
-# criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-# criterion = F1_Loss()
-criterion = nn.BCELoss()
+criterion = nn.BCEWithLogitsLoss() # This combines Sigmoid and BCE
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
 """### Load Data
@@ -269,6 +262,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
 
         # forward + backward + optimize
         outputs = model(inputs)
+        outputs = outputs.clamp(min=0, max=1)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
