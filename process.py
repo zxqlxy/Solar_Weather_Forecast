@@ -157,7 +157,8 @@ def process(events, *argv):
 
         print(label[1], label[4], data_index)
         print(yr + mo + da + "_" + ho + mi, tar)
-
+        if np.any(np.isnan(src_list[data_index])):
+            print("WARNING: nan encountered at ", data_index)
         data_index += 1
 
     print(src_list.shape)
