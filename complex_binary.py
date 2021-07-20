@@ -275,7 +275,6 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
 
         # forward + backward + optimize
         outputs = model(inputs)
- 	#       outputs = outputs.clamp(min=0, max=1)
         assert not np.any(np.isnan(outputs.tolist()))
         loss = criterion(outputs, labels)
         loss.backward()
@@ -304,7 +303,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
             inputs = inputs.float().to(device)
             labels = labels.float().to(device)
             
-        target = model(inputs)
+        target = nn.Sigmoid()(model(inputs))
         # loss = criterion(target,labels)
         f1_loss += f1(target,labels).item()
         tss_loss += tss(target,labels).item()
