@@ -13,20 +13,33 @@ import pandas as pd
 import numpy as np
 from torch import nn
 # import matplotlib.pyplot as plt
+import argparse
 
+parser = argparse.ArgumentParser(description='complex_binary')
+parser.add_argument('--epoch', type=int, default=100, help='number of epoches')
+parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+# parser.add_argument('--batch_size', type=int, default=32, help='batch size')
+# parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
+parser.add_argument('--use_benchmark', dest='use_benchmark', action='store_true', default=True, help='use benchmark')
+# parser.add_argument('--exp_name', type=str, default='cudnn_test', help='output file name')
+args = parser.parse_args()
+
+
+print(args)
 
 base = "/scratch/xl73/"
+LR = args.lr
 
-"""### Check Device
-
-
+""" Check Device
 1.   Add support to one cuda device
-
-
 """
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('Using {} device'.format(device))
+
+# Use bench mark to accelerate the training
+if device == 'cuda' and args.use_benchmark:
+    torch.backends.cudnn.benchmark = True
 
 """### Create Model
 
@@ -87,7 +100,7 @@ class NeuralNetwork(nn.Module):
         return out
 
 model = NeuralNetwork(5).to(device)
-print(model)
+# print(model)
 
 """### Loss and Optimize"""
 
@@ -169,12 +182,11 @@ tss = TSS().cuda()
 import torch.optim as optim
 
 criterion = nn.BCEWithLogitsLoss() # This combines Sigmoid and BCE
-optimizer = optim.Adam(model.parameters(), lr=0.0001)
+optimizer = optim.Adam(model.parameters(), lr=LR)
 
 """### Load Data
 
 1.   Create customized dataset 
-
 
 """
 
