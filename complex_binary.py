@@ -17,7 +17,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='complex_binary')
 parser.add_argument('--epoch', type=int, default=100, help='number of epoches')
-parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 # parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
 parser.add_argument('--use_benchmark', dest='use_benchmark', action='store_true', default=True, help='use benchmark')
@@ -218,7 +218,6 @@ class SolarData(Dataset):
         data2.close()
 
         # Everything smaller than 0 is wrong
-        self.src[np.isnan(self.src)] = 0 # get rid of nan
         self.src[self.src < 0] = 0
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
@@ -235,23 +234,23 @@ class SolarData(Dataset):
         return sample
 
 solar_dataset = SolarData(
-    npz_file1= base + 'maps_256_6806_flares.npz',
+    npz_file1= base + 'maps_256_6800_flares.npz',
     npz_file2= base + 'maps_256_7000_non_flares.npz')
 
 valid_dataset = SolarData(
-    npz_file1= base + 'maps_256_6806_flares.npz',
+    npz_file1= base + 'maps_256_6800_flares.npz',
     npz_file2= base + 'maps_256_7000_non_flares.npz',
     valid= True)
 
 trainloader = torch.utils.data.DataLoader(solar_dataset, batch_size=32,
                                           shuffle=True, num_workers=2)
-validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=64,
+validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
                                           shuffle=True, num_workers=2)
 
 """### Trainning"""
 
 min_valid_loss = np.inf
-EPOCH = 50
+EPOCH = 100
 train_loss_list = []
 valid_loss_list = []
 
@@ -281,7 +280,6 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
         optimizer.step()
 
         # print statistics
-        # print(loss.item())
         train_loss += loss.item()
         if i % 100 == 99:    # print every 100 mini-batches
             print('[%d, %5d] loss: %.6f' %
