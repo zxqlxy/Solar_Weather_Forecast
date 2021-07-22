@@ -164,7 +164,9 @@ class SolarData(Dataset):
         data2.close()
 
         # Everything smaller than 0 is wrong
-        self.src[self.src < 0] = 0
+        self.src[self.src < 0] = 1e-7
+        # TODO Log scale or not
+        self.src = np.log(self.src)
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
 
