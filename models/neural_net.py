@@ -7,7 +7,7 @@ from torch import nn
 
 class DenseBlock(nn.Module):
     def __init__(self, n):
-        super().__init__()
+        super(DenseBlock, self).__init__()
         inplanes = ((n)*3 + 2) * 13
         self.add_module('bn1', nn.BatchNorm2d(inplanes))
         self.add_module('relu', nn.ReLU(inplace=True))
@@ -35,7 +35,7 @@ class DenseBlock(nn.Module):
 
 class NeuralNetwork(nn.Module):
     def __init__(self, num_dense):
-        super().__init__()
+        super(NeuralNetwork, self).__init__()
         self.num_dense = num_dense
         self.initial = nn.Sequential(
             nn.Conv2d(in_channels=3, out_channels=26, kernel_size=3),
@@ -47,15 +47,12 @@ class NeuralNetwork(nn.Module):
         for i in range(self.num_dense):
             block = DenseBlock(i)
             self.initial.add_module('denseblock%d' % (i + 1), block)
-        # self.denseblocks = [.to(device) for num in range(self.num_dense)]
+
         # not sure what the input dimension is
         self.fc = nn.Linear(221, 1)
 
     def forward(self, x):
         out = self.initial(x)
-
-        # for num in range(self.num_dense):
-        #     out = self.denseblocks[num](out)
 
         out = self.end(out)
         out = torch.flatten(out, 1)
