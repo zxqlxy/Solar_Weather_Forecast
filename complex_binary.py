@@ -17,7 +17,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='complex_binary')
 parser.add_argument('--epoch', type=int, default=100, help='number of epoches')
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 # parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
 parser.add_argument('--use_benchmark', dest='use_benchmark', action='store_true', default=True, help='use benchmark')
@@ -141,13 +141,11 @@ from torch.utils.data import Dataset, DataLoader
 class SolarData(Dataset):
     """Solar dataset."""
 
-    def __init__(self, npz_file1, npz_file2, valid = False):
+    def __init__(self, data1, data2, valid = False):
         """
         Args:
-            npz_file (string): Path to the npz file with annotations.
+            data (np.array): Path to the npz file with annotations.
         """
-        data1 = np.load(npz_file1)
-        data2 = np.load(npz_file2)
 
         size1 = len(data1["arr_1"]) * 4 // 5
         size2 = len(data2["arr_1"]) * 4 // 5
@@ -158,14 +156,8 @@ class SolarData(Dataset):
             self.src = np.concatenate((data1["arr_0"][:size1], data2["arr_0"][:size2]), axis = 0)
             self.tar = np.concatenate((data1["arr_1"][:size1], data2["arr_1"][:size2]), axis = 0)
 
-        del data1.f
-        del data2.f
-        data1.close()
-        data2.close()
-
         # Everything smaller than 0 is wrong
-        self.src[self.src < 0] = 1e-7
-        # TODO Log scale or not
+        self.src[self.src <= 0] = 1e-2
         self.src = np.log(self.src)
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
@@ -181,16 +173,23 @@ class SolarData(Dataset):
 
         return sample
 
+data1 = np.load(base + 'maps_256_6800_flares.npz')
+data2 = np.load(base + 'maps_256_7000_non_flares.npz')
+
 solar_dataset = SolarData(
-    npz_file1= base + 'maps_256_6800_flares.npz',
-    npz_file2= base + 'maps_256_7000_non_flares.npz')
+    data1 = data1,
+    data2 = data2)
 
 valid_dataset = SolarData(
-    npz_file1= base + 'maps_256_6800_flares.npz',
-    npz_file2= base + 'maps_256_7000_non_flares.npz',
-    valid= True)
+    data1 = data1,
+    data2 = data2, valid = True)
 
-trainloader = torch.utils.data.DataLoader(solar_dataset, batch_size=32,
+del data1.f
+del data2.f
+data1.close()
+data2.close()
+
+trainloader = torch.utils.data.DataLoader(solar_dataset, batch_size=64,
                                           shuffle=True, num_workers=2)
 validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
                                           shuffle=True, num_workers=2)
@@ -205,6 +204,7 @@ valid_loss_list = []
 for epoch in range(EPOCH):  # loop over the dataset multiple times
 
     train_loss = 0.0
+    model.train()
     for i, data in enumerate(trainloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
