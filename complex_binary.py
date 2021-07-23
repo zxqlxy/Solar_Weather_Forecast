@@ -12,16 +12,18 @@ import torch
 from torch import nn
 import pandas as pd
 import numpy as np
-from models import NeuralNetwork
 # import matplotlib.pyplot as plt
 import argparse
+
+from models import NeuralNetwork
+from metrics import F1, TSS
 
 parser = argparse.ArgumentParser(description='complex_binary')
 parser.add_argument('--epoch', type=int, default=100, help='number of epoches')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 # parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
-parser.add_argument('--use_benchmark', dest='use_benchmark', action='store_true', default=True, help='use benchmark')
+parser.add_argument('--use_benchmark', dest='use_benchmark', default=True, help='use benchmark')
 # parser.add_argument('--exp_name', type=str, default='cudnn_test', help='output file name')
 args = parser.parse_args()
 
@@ -42,124 +44,34 @@ print('Using {} device'.format(device))
 if device == 'cuda' and args.use_benchmark:
     torch.backends.cudnn.benchmark = True
 
-"""### Create Model
-
-"""
-
-model = NeuralNetwork(5).to(device)
-print(model)
-
-"""### Loss and Optimize"""
-
-class F1(nn.Module):
-    '''Calculate F1 score. Can work with gpu tensors
-    
-    The original implmentation is written by Michal Haltuf on Kaggle.
-    
-    Returns
-    -------
-    torch.Tensor
-        `ndim` == 1. epsilon <= val <= 1
-    
-    Reference
-    ---------
-    - https://www.kaggle.com/rejpalcz/best-loss-function-for-f1-score-metric
-    - https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score
-    - https://discuss.pytorch.org/t/calculating-precision-recall-and-f1-score-in-case-of-multi-label-classification/28265/6
-    - http://www.ryanzhang.info/python/writing-your-own-loss-function-module-for-pytorch/
-    '''
-    def __init__(self, epsilon=1e-7):
-        super().__init__()
-        self.epsilon = epsilon
-        
-    def forward(self, y_pred, y_true):
-        assert y_pred.ndim == 2
-        # assert y_true.ndim == 1
-        # y_true = F.one_hot(y_true, 2).to(torch.float32)
-        # y_pred = F.softmax(y_pred, dim=1)
-        
-        tp = (y_true * y_pred).sum(dim=0).to(torch.float32)
-        tn = ((1 - y_true) * (1 - y_pred)).sum(dim=0).to(torch.float32)
-        fp = ((1 - y_true) * y_pred).sum(dim=0).to(torch.float32)
-        fn = (y_true * (1 - y_pred)).sum(dim=0).to(torch.float32)
-
-        precision = tp / (tp + fp + self.epsilon)
-        recall = tp / (tp + fn + self.epsilon)
-
-        f1 = 2* (precision*recall) / (precision + recall + self.epsilon)
-        # f1 = f1.clamp(min=self.epsilon, max=1-self.epsilon)
-        # return 1 - f1.mean()
-        return f1
-
-f1 = F1().cuda()
-
-class TSS(nn.Module):
-    '''Calculate TSS. Can work with gpu tensors
-    
-    The original implmentation is written by Michal Haltuf on Kaggle.
-    
-    Returns
-    -------
-    torch.Tensor
-        `ndim` == 1. epsilon <= val <= 1
-    
-    '''
-    def __init__(self, epsilon=1e-7):
-        super().__init__()
-        self.epsilon = epsilon
-        
-    def forward(self, y_pred, y_true,):
-        assert y_pred.ndim == 2
-        # assert y_true.ndim == 1
-        # y_true = F.one_hot(y_true, 2).to(torch.float32)
-        # y_pred = F.softmax(y_pred, dim=1)
-        
-        tp = (y_true * y_pred).sum(dim=0).to(torch.float32)
-        tn = ((1 - y_true) * (1 - y_pred)).sum(dim=0).to(torch.float32)
-        fp = ((1 - y_true) * y_pred).sum(dim=0).to(torch.float32)
-        fn = (y_true * (1 - y_pred)).sum(dim=0).to(torch.float32)
-
-        first = tp / (tp + fn + self.epsilon)
-        second = fp / (fp + tn + self.epsilon)
-
-        return first - second
-
-tss = TSS().cuda()
-
-import torch.optim as optim
-
-criterion = nn.BCEWithLogitsLoss() # This combines Sigmoid and BCE
-optimizer = optim.Adam(model.parameters(), lr=LR)
-
 """### Load Data
 
 1.   Create customized dataset 
 
 """
 
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
+from torchvision import transforms
+
+# data_transforms = transforms.Compose([
+#         transforms.ToTensor(),
+# ])
 
 class SolarData(Dataset):
     """Solar dataset."""
 
-    def __init__(self, data1, data2, valid = False):
+    def __init__(self, data1, data2):
         """
         Args:
             data (np.array): Path to the npz file with annotations.
         """
-
-        size1 = len(data1["arr_1"]) * 4 // 5
-        size2 = len(data2["arr_1"]) * 4 // 5
-        if valid:
-            self.src = np.concatenate((data1["arr_0"][size1:], data2["arr_0"][size2:]), axis = 0)
-            self.tar = np.concatenate((data1["arr_1"][size1:], data2["arr_1"][size2:]), axis = 0)
-        else:
-            self.src = np.concatenate((data1["arr_0"][:size1], data2["arr_0"][:size2]), axis = 0)
-            self.tar = np.concatenate((data1["arr_1"][:size1], data2["arr_1"][:size2]), axis = 0)
+        super(SolarData, self).__init__()
+        self.src = np.concatenate((data1["arr_0"], data2["arr_0"]), axis = 0)
+        self.tar = np.concatenate((data1["arr_1"], data2["arr_1"]), axis = 0)
 
         # Everything smaller than 0 is wrong
-        self.src[self.src <= 0] = 1e-2
-        self.src = np.log(self.src)
+        self.src[self.src <= 0] = 1e-3
+        # self.src = np.log(self.src)
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
 
@@ -171,19 +83,19 @@ class SolarData(Dataset):
             idx = idx.tolist()
 
         sample = [self.src[idx-1], self.tar[idx-1]]
+        # sample = data_transforms(sample) # convert to tensor
 
         return sample
 
 data1 = np.load(base + 'maps_256_6800_flares.npz')
 data2 = np.load(base + 'maps_256_7000_non_flares.npz')
 
-solar_dataset = SolarData(
-    data1 = data1,
-    data2 = data2)
+dataset = SolarData(data1= data1, data2= data2)
+train_size = len(dataset) * 4 // 5
+val_size = len(dataset) - train_size
 
-valid_dataset = SolarData(
-    data1 = data1,
-    data2 = data2, valid = True)
+print(len(dataset), train_size, val_size)
+solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
 
 del data1.f
 del data2.f
@@ -191,14 +103,31 @@ data1.close()
 data2.close()
 
 trainloader = torch.utils.data.DataLoader(solar_dataset, batch_size=64,
-                                          shuffle=True, num_workers=2)
+                                          shuffle=True, num_workers=2, pin_memory=True)
 validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
-                                          shuffle=True, num_workers=2)
+                                          shuffle=True, num_workers=2, pin_memory=True)
+
+
+"""### Create Model
+
+"""
+
+model = NeuralNetwork(5).to(device)
+print(model)
+
+
+f1 = F1().cuda()
+tss = TSS().cuda()
+
+import torch.optim as optim
+
+criterion = nn.BCEWithLogitsLoss() # This combines Sigmoid and BCE
+optimizer = optim.Adam(model.parameters(), lr=LR)
 
 """### Trainning"""
 
 min_valid_loss = np.inf
-EPOCH = 100
+EPOCH = args.epoch
 train_loss_list = []
 valid_loss_list = []
 
@@ -236,8 +165,11 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
 
 
     # Validation
-    f1_loss = 0.0
-    tss_loss = 0.0
+    tp = 0.0
+    tn = 0.0
+    fp = 0.0
+    fn = 0.0
+    epsilon = 1e-7
     model.eval()     # Optional when not using Model Specific layer
     for i, data in enumerate(validloader, 0):
         inputs, labels = data
@@ -252,19 +184,29 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
             
         target = nn.Sigmoid()(model(inputs))
         # loss = criterion(target,labels)
-        f1_loss += f1(target,labels).item()
-        tss_loss += tss(target,labels).item()
+        tp += (labels * target).sum(dim=0).to(torch.float32).item()
+        tn += ((1 - labels) * (1 - target)).sum(dim=0).to(torch.float32).item()
+        fp += ((1 - labels) * target).sum(dim=0).to(torch.float32).item()
+        fn += (labels * (1 - target)).sum(dim=0).to(torch.float32).item()
+        # f1_loss += f1(target,labels).item()
+        # tss_loss += tss(target,labels).item()
         # valid_loss = loss.item() * inputs.size(0)
 
-    print(f'Epoch {epoch+1} \t\t Training Loss: {train_loss / len(trainloader)} \t\t F1 Loss: {f1_loss / len(validloader)} \t TSS Loss: {tss_loss / len(validloader)}')
+    precision = tp / (tp + fp + epsilon)
+    recall = tp / (tp + fn + epsilon)
+
+    f1 = 2* (precision*recall) / (precision + recall + epsilon)
+    tss = tp / (tp + fn + epsilon) - fp / (fp + tn + epsilon)
+    acc = tp + tn / (tp + tn + fp + fn)
+    print(f'Epoch {epoch+1} \t Training Loss: {train_loss / len(trainloader)} \t F1: {f1 } \t TSS: {tss} \t Accuracy: {acc}')
     
     train_loss_list.append(train_loss)
-    valid_loss_list.append((f1_loss, tss_loss))
+    valid_loss_list.append((f1, tss))
 
     # Save model
-    if min_valid_loss > f1_loss:
-        print(f'Validation Loss Decreased({min_valid_loss:.6f}--->{f1_loss:.6f}) \t Saving The Model')
-        min_valid_loss = f1_loss
+    if min_valid_loss > f1:
+        print(f'Validation Loss Decreased({min_valid_loss:.6f}--->{f1:.6f}) \t Saving The Model')
+        min_valid_loss = f1
         # Saving State Dict
         torch.save(model.state_dict(), 'saved_model.pth')
 
