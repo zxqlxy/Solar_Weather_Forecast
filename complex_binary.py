@@ -70,8 +70,8 @@ class SolarData(Dataset):
         self.tar = np.concatenate((data1["arr_1"], data2["arr_1"]), axis = 0)
 
         # Everything smaller than 0 is wrong
-        self.src[self.src <= 0] = 1e-3
-        # self.src = np.log(self.src)
+        self.src[self.src <= 1] = 1
+        self.src = np.log(self.src)
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
 
@@ -197,7 +197,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
 
     f1 = 2* (precision*recall) / (precision + recall + epsilon)
     tss = tp / (tp + fn + epsilon) - fp / (fp + tn + epsilon)
-    acc = tp + tn / (tp + tn + fp + fn)
+    acc = (tp + tn) / (tp + tn + fp + fn)
     print(f'Epoch {epoch+1} \t Training Loss: {train_loss / len(trainloader)} \t F1: {f1 } \t TSS: {tss} \t Accuracy: {acc}')
     
     train_loss_list.append(train_loss)
