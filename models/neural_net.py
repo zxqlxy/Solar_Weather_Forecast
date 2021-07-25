@@ -10,9 +10,10 @@ class DenseBlock(nn.Module):
         super(DenseBlock, self).__init__()
         inplanes = ((n)*3 + 2) * 13
         self.add_module('bn1', nn.BatchNorm2d(inplanes))
-        self.add_module('relu', nn.ReLU(inplace=True))
+        self.add_module('relu1', nn.ReLU(inplace=True))
         self.add_module('conv1', nn.Conv2d(inplanes, (n+1)*13, kernel_size=1, stride=1))
         self.add_module('bn2', nn.BatchNorm2d((n+1)*13))
+        self.add_module('relu2', nn.ReLU(inplace=True))
         self.add_module('conv2', nn.Conv2d((n+1)*13, 39, kernel_size=3, stride=1,padding=1)) # Must add padding
         self.add_module('pool', nn.AvgPool2d(kernel_size=2, stride=2))
     
@@ -20,10 +21,10 @@ class DenseBlock(nn.Module):
         identity = x
 
         out = self.bn1(x)
-        out = self.relu(out)
+        out = self.relu1(out)
         out = self.conv1(out)
         out = self.bn2(out)
-        out = self.relu(out)
+        out = self.relu2(out)
         out = self.conv2(out)
 
         # out += identity

@@ -16,7 +16,7 @@ import numpy as np
 import argparse
 
 from models import NeuralNetwork
-from metrics import F1, TSS
+# from metrics import F1, TSS
 
 parser = argparse.ArgumentParser(description='complex_binary')
 parser.add_argument('--epoch', type=int, default=100, help='number of epoches')
@@ -60,7 +60,7 @@ from torchvision import transforms
 class SolarData(Dataset):
     """Solar dataset."""
 
-    def __init__(self, data1, data2):
+    def __init__(self, data1, data2, log = True):
         """
         Args:
             data (np.array): Path to the npz file with annotations.
@@ -71,9 +71,13 @@ class SolarData(Dataset):
 
         # Everything smaller than 0 is wrong
         self.src[self.src <= 1] = 1
-        self.src = np.log(self.src)
+        if log:
+            self.src = np.log(self.src)
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
+
+        self.src = self.src[:, :, 26:230, 26:230]
+
 
     def __len__(self):
         return len(self.tar)
@@ -116,8 +120,8 @@ model = NeuralNetwork(5).to(device)
 print(model)
 
 
-f1 = F1().cuda()
-tss = TSS().cuda()
+#f1 = F1().cuda()
+#tss = TSS().cuda()
 
 import torch.optim as optim
 
@@ -126,7 +130,7 @@ optimizer = optim.Adam(model.parameters(), lr=LR)
 
 """### Trainning"""
 
-min_valid_loss = np.inf
+min_valid_loss = -np.inf
 EPOCH = args.epoch
 train_loss_list = []
 valid_loss_list = []
@@ -195,7 +199,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     precision = tp / (tp + fp + epsilon)
     recall = tp / (tp + fn + epsilon)
 
-    f1 = 2* (precision*recall) / (precision + recall + epsilon)
+    f1 = 2 * (precision*recall) / (precision + recall + epsilon)
     tss = tp / (tp + fn + epsilon) - fp / (fp + tn + epsilon)
     acc = (tp + tn) / (tp + tn + fp + fn)
     print(f'Epoch {epoch+1} \t Training Loss: {train_loss / len(trainloader)} \t F1: {f1 } \t TSS: {tss} \t Accuracy: {acc}')
@@ -204,7 +208,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     valid_loss_list.append((f1, tss))
 
     # Save model
-    if min_valid_loss > f1:
+    if min_valid_loss < f1:
         print(f'Validation Loss Decreased({min_valid_loss:.6f}--->{f1:.6f}) \t Saving The Model')
         min_valid_loss = f1
         # Saving State Dict
