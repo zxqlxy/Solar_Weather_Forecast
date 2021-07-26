@@ -23,21 +23,26 @@ from numpy import savez_compressed
 from datetime import datetime, timedelta
 from os import path
 import random
+import argparse
+
 
 from parse_label import parse_label
 from config import start, end, report_name, delta
 
+
+
+
 base = "E:\\xl73\\data\\094\\"
 start_time = datetime.strptime(start, '%Y-%m-%d %H:%M')
 end_time = datetime.strptime(end, '%Y-%m-%d %H:%M')
-locPath = "E:\\xl73\\data\\processed\\"
+dest = "E:\\xl73\\data\\average\\"
 count = (end_time - start_time) // delta            # number of data points
-count = 1808
+
 targets = ['', '', '', 'C', 'M', "X"]
 
-def process(events, *argv):
+def process(events, args):
     """
-
+    Pre-process the data
     """
     print(argv)
     filename = 'maps_1024.npz'
@@ -45,14 +50,14 @@ def process(events, *argv):
     if "256" in argv:
         filename = 'maps_256.npz'
 
-    src_list = np.zeros((count, 3, 256, 256))
+    src_list = np.zeros((3, 256, 256))
     tar_list = np.zeros((count,))
     temp = np.zeros((3, 1024, 1024))
     time = start_time
-    data_index = -5000
+    data_index = 0
     label_index = 0
 
-    while time < end_time and data_index < count:
+    while time < end_time:
         time += delta
         yr = str(time.year)
         mo = str(time.month) if time.month >= 10 else '0' + str(time.month)
@@ -78,8 +83,6 @@ def process(events, *argv):
             continue
 
         # Create label, N, C, M, X
-        # future, it can include different classes and number of events and more
-        
         while True:
             # Reach the end
             if label_index == len(events):
@@ -93,28 +96,26 @@ def process(events, *argv):
                 label_index += 1
             # If find one break at once
             elif time < dt and time + delta > dt:
-                tar = targets.index(label[4]) if label[4] in targets else 0
+                # tar = targets.index(label[4]) if label[4] in targets else 0
+                tar = 1 if label[4] in targets else 0
                 label_index += 1
                 break
             # Need to move forward the current time
             else:
                 break
 
-        # Ignore any non flare data
+        # Ignore non flare data
         if tar == 0:
-            # data_index += 1
-            continue
-        
-        if data_index < 0:
-            data_index += 1
-            continue
-        # Ignore 75 percent
-        # if random.random() > 0.25:
+            if args.ignore_non_flares:
+                continue
+            elif random.random() < args.ignore_percent:
+                continue
+
+        # if data_index < 0:
+        #     data_index += 1
         #     continue
 
-
-        # Once begine reading file, it's getting SLOWER
-        # Make sure this reading is necessary
+        # Read file
         # lis = sunpy.io.fits.read(base + thisFile)
         smap094 = sunpy.map.Map(base + thisFile1)
         smap171 = sunpy.map.Map(base + thisFile2)
@@ -132,48 +133,68 @@ def process(events, *argv):
 
         mask = ma.masked_greater_equal(r, 1)
         # In reality, everything smaller than 0 is wrong
-        temp[0] = ma.array(data1, mask=mask.mask, fill_value = -1).filled() # fillded with -999
-        temp[1] = ma.array(data2, mask=mask.mask, fill_value = -1).filled() # fillded with -999
-        temp[2] = ma.array(data3, mask=mask.mask, fill_value = -1).filled() # fillded with -999
+        temp[0] = ma.array(data1, mask=mask.mask, fill_value = -1).filled() # fillded with -1
+        temp[1] = ma.array(data2, mask=mask.mask, fill_value = -1).filled() # fillded with -1
+        temp[2] = ma.array(data3, mask=mask.mask, fill_value = -1).filled() # fillded with -1
 
         # put in the data
-        src_list[data_index] = downsample_256(temp)
+        if args.down == 'average':
+            src_list= downsample_256(temp, 'average')
+        else:
+            src_list = downsample_256(temp)
         tar_list[data_index] = tar
 
-        if "plot_original" in argv:
-            scaled_map = sunpy.map.Map(smap094.data, smap094.meta)
-            fig = plt.figure()
-            plt.subplot(projection=scaled_map)
-            scaled_map.plot(cmap=smap094.cmap)
-            scaled_map.draw_limb()
-            plt.show()
-        elif "plot_masked" in argv:
-            scaled_map = sunpy.map.Map(smap094.data, smap094.meta, mask=mask.mask)
-            fig = plt.figure()
-            plt.subplot(projection=scaled_map)
-            scaled_map.plot(cmap=smap094.cmap)
-            scaled_map.draw_limb()
-            plt.show()
+        # ignore nan files
+        if np.any(np.isnan(src_list)):
+            print("WARNING: nan encountered at ", yr + mo + da + "_" + ho + mi, tar)
+            continue
+
+        # Save file one by one
+        if tar == 1:
+            # sunpy.io.write_file(dest + "flares\\" + "AIA"+ yr + mo + da + "_" + ho + mi + '.fits', src_list, smap094.meta)
+            np.save(dest + "flares\\" + "AIA"+ yr + mo + da + "_" + ho + mi + '.fits', src_list)
+        else:
+            # sunpy.io.write_file(dest + "non-flares\\" + "AIA"+ yr + mo + da + "_" + ho + mi + '.fits', src_list, smap094.meta)
+            np.save(dest + "non-flares\\" + "AIA"+ yr + mo + da + "_" + ho + mi + '.fits', src_list)
+
+        # np.set_printoptions(threshold=np.inf)
+        # print(src_list[data_index])
+        # print(smap094.meta)
+        # if "plot_original" in argv:
+        #     scaled_map = sunpy.map.Map(src_list[data_index][:, 26:230, 26:230], smap094.meta)
+        #     fig = plt.figure()
+        #     plt.subplot(projection=scaled_map)
+        #     scaled_map.plot(cmap=smap094.cmap)
+        #     scaled_map.draw_limb()
+        #     plt.colorbar()
+        #     plt.show()
+        # elif "plot_masked" in argv:
+        #     scaled_map = sunpy.map.Map(smap094.data, smap094.meta, mask=mask.mask)
+        #     fig = plt.figure()
+        #     plt.subplot(projection=scaled_map)
+        #     scaled_map.plot(cmap=smap094.cmap)
+        #     scaled_map.draw_limb()
+        #     plt.show()
 
         print(label[1], label[4], data_index)
         print(yr + mo + da + "_" + ho + mi, tar)
-        if np.any(np.isnan(src_list[data_index])):
-            print("WARNING: nan encountered at ", data_index)
+
         data_index += 1
 
-    print(src_list.shape)
-    print(tar_list.shape)
+    # print(src_list.shape)
+    # print(tar_list.shape)
 
     print(data_index, time)
-    if "saveFile" in argv:
+    # Save file
+    if argv.save_file:
         print('Loaded: ', src_list.shape)
         savez_compressed(filename, src_list, tar_list)
         print('Saved dataset: ', filename)
 
 
 # Downsample any 1024 x 1024 np.array to 256 x 256
-def downsample_256(src):
-    """Use max-pooling to down-sample
+def downsample_256(src, opt = 'max'):
+    """Use max-pooling or average-pooling to down-sample 
 
     Args:
         src ([np.array]): array of size N, h, w
@@ -183,7 +204,13 @@ def downsample_256(src):
     """
 
     N,h,w = src.shape
-    res = np.amax([src[:, i//4::4,i%4::4] for i in range(16)], axis = 0)
+    if opt == 'max':
+        res = np.amax([src[:, i//4::4, i%4::4] for i in range(16)], axis = 0)
+    elif opt == 'average':
+        res = np.mean([src[:, i//4::4, i%4::4] for i in range(16)], axis = 0)
+    else:
+        print("Option not implemented")
+        return None
     return res
 
 
@@ -226,7 +253,15 @@ def plot_day(yr: str, mo: str, da: str):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='process')
+    parser.add_argument('--down', type=str, default="average", help='One of two downsample algo: average, max')
+    parser.add_argument('--ignore_non_flares', type=bool, default=False, help='Ignoring non flares')
+    parser.add_argument('--ignore_percent', type=float, default=0.0, help='Ignoring some percent of non flares')
+    parser.add_argument('--save_file', type=bool, default=False, help='Save as NPZ file')
+
+    # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
+    # parser.add_argument('--exp_name', type=str, default='cudnn_test', help='output file name')
+    args = parser.parse_args()
+    
     events = parse_label(report_name)
-    # events = None
-    process(events, "256", "saveFile")
-    # plot_day("2019", "03", "09")
+    process(events, args)
