@@ -16,6 +16,7 @@ import numpy as np
 import argparse
 
 from models import NeuralNetwork
+from utils import ImageFolder
 # from metrics import F1, TSS
 
 parser = argparse.ArgumentParser(description='complex_binary')
@@ -51,7 +52,6 @@ if device == 'cuda' and args.use_benchmark:
 """
 
 from torch.utils.data import Dataset, DataLoader, random_split
-from torchvision import transforms
 
 # data_transforms = transforms.Compose([
 #         transforms.ToTensor(),
@@ -76,6 +76,7 @@ class SolarData(Dataset):
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
         self.tar = self.tar.reshape(self.tar.shape[0], 1)
 
+        # CenterCrop
         self.src = self.src[:, :, 26:230, 26:230]
 
 
@@ -91,25 +92,48 @@ class SolarData(Dataset):
 
         return sample
 
-data1 = np.load(base + 'maps_256_6800_flares.npz')
-data2 = np.load(base + 'maps_256_7000_non_flares.npz')
+# data1 = np.load(base + 'maps_256_6800_flares.npz')
+# data2 = np.load(base + 'maps_256_7000_non_flares.npz')
 
-dataset = SolarData(data1= data1, data2= data2)
-train_size = len(dataset) * 4 // 5
-val_size = len(dataset) - train_size
+# dataset = SolarData(data1 = data1, data2 = data2)
+# train_size = len(dataset) * 4 // 5
+# val_size = len(dataset) - train_size
 
-print(len(dataset), train_size, val_size)
-solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
+# print(len(dataset), train_size, val_size)
+# solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
 
-del data1.f
-del data2.f
-data1.close()
-data2.close()
+# del data1.f
+# del data2.f
+# data1.close()
+# data2.close()
 
-trainloader = torch.utils.data.DataLoader(solar_dataset, batch_size=64,
+
+
+import torchvision.transforms as transforms
+
+traindir = base + 'train'
+valdir = base + 'val'
+
+train_dataset = ImageFolder(
+        traindir,
+        transforms.Compose([
+            transforms.CenterCrop(204),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+        ]))
+valid_dataset = ImageFolder(
+        valdir,
+        transforms.Compose([
+            transforms.CenterCrop(204),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+        ]))
+
+trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=64,
                                           shuffle=True, num_workers=2, pin_memory=True)
 validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
                                           shuffle=True, num_workers=2, pin_memory=True)
+
 
 
 """### Create Model
