@@ -1,4 +1,3 @@
-# from torchvision.datasets.folder import DatasetFolder
 import numpy as np
 
 from .vision import VisionDataset

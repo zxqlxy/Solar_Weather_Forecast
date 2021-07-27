@@ -44,10 +44,10 @@ def process(events, args):
     """
     Pre-process the data
     """
-    print(argv)
+    print(args)
     filename = 'maps_1024.npz'
     label_file = 'label.npz'
-    if "256" in argv:
+    if "256" in args:
         filename = 'maps_256.npz'
 
     src_list = np.zeros((3, 256, 256))
@@ -186,7 +186,7 @@ def process(events, args):
 
     print(data_index, time)
     # Save file
-    if argv.save_file:
+    if args.save_file:
         print('Loaded: ', src_list.shape)
         savez_compressed(filename, src_list, tar_list)
         print('Saved dataset: ', filename)

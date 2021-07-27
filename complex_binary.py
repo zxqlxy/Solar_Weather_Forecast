@@ -53,44 +53,7 @@ if device == 'cuda' and args.use_benchmark:
 
 from torch.utils.data import Dataset, DataLoader, random_split
 
-# data_transforms = transforms.Compose([
-#         transforms.ToTensor(),
-# ])
 
-class SolarData(Dataset):
-    """Solar dataset."""
-
-    def __init__(self, data1, data2, log = True):
-        """
-        Args:
-            data (np.array): Path to the npz file with annotations.
-        """
-        super(SolarData, self).__init__()
-        self.src = np.concatenate((data1["arr_0"], data2["arr_0"]), axis = 0)
-        self.tar = np.concatenate((data1["arr_1"], data2["arr_1"]), axis = 0)
-
-        # Everything smaller than 0 is wrong
-        self.src[self.src <= 1] = 1
-        if log:
-            self.src = np.log(self.src)
-        self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
-        self.tar = self.tar.reshape(self.tar.shape[0], 1)
-
-        # CenterCrop
-        self.src = self.src[:, :, 26:230, 26:230]
-
-
-    def __len__(self):
-        return len(self.tar)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        sample = [self.src[idx-1], self.tar[idx-1]]
-        # sample = data_transforms(sample) # convert to tensor
-
-        return sample
 
 # data1 = np.load(base + 'maps_256_6800_flares.npz')
 # data2 = np.load(base + 'maps_256_7000_non_flares.npz')
@@ -108,7 +71,6 @@ class SolarData(Dataset):
 # data2.close()
 
 
-
 import torchvision.transforms as transforms
 
 traindir = base + 'train'
@@ -118,14 +80,14 @@ train_dataset = ImageFolder(
         traindir,
         transforms.Compose([
             transforms.CenterCrop(204),
-            transforms.RandomHorizontalFlip(),
+          #  transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
         ]))
 valid_dataset = ImageFolder(
         valdir,
         transforms.Compose([
             transforms.CenterCrop(204),
-            transforms.RandomHorizontalFlip(),
+         #   transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
         ]))
 
@@ -143,9 +105,6 @@ validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
 model = NeuralNetwork(5).to(device)
 print(model)
 
-
-#f1 = F1().cuda()
-#tss = TSS().cuda()
 
 import torch.optim as optim
 
@@ -166,6 +125,8 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     for i, data in enumerate(trainloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
+        inputs = torch.reshape(inputs, (inputs.shape[0], 3, 204, 204))
+        labels = torch.reshape(labels, (-1,1))
 
         # Convert to float
         if device == "cpu":
@@ -201,6 +162,8 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     model.eval()     # Optional when not using Model Specific layer
     for i, data in enumerate(validloader, 0):
         inputs, labels = data
+        inputs = torch.reshape(inputs, (inputs.shape[0], 3, 204, 204))
+        labels = torch.reshape(labels, (-1,1))
 
         # Convert to float
         if device == "cpu":
