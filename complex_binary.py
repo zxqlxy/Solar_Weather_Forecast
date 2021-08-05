@@ -17,17 +17,17 @@ import argparse
 
 from models import NeuralNetwork
 from utils import ImageFolder
+from transforms import CenterCrop
 # from metrics import F1, TSS
 
 parser = argparse.ArgumentParser(description='complex_binary')
-parser.add_argument('--epoch', type=int, default=100, help='number of epoches')
+parser.add_argument('--epoch', type=int, default=50, help='number of epoches')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
-# parser.add_argument('--batch_size', type=int, default=32, help='batch size')
+parser.add_argument('--batch_size', type=int, default=32, help='training batch size')
 # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
 parser.add_argument('--use_benchmark', dest='use_benchmark', default=True, help='use benchmark')
 # parser.add_argument('--exp_name', type=str, default='cudnn_test', help='output file name')
 args = parser.parse_args()
-
 
 print(args)
 
@@ -51,8 +51,7 @@ if device == 'cuda' and args.use_benchmark:
 
 """
 
-from torch.utils.data import Dataset, DataLoader, random_split
-
+# from torch.utils.data import Dataset, DataLoader, random_split
 
 
 # data1 = np.load(base + 'maps_256_6800_flares.npz')
@@ -79,15 +78,13 @@ valdir = base + 'val'
 train_dataset = ImageFolder(
         traindir,
         transforms.Compose([
-            transforms.CenterCrop(204),
-          #  transforms.RandomHorizontalFlip(),
+            CenterCrop(204),
             transforms.ToTensor(),
         ]))
 valid_dataset = ImageFolder(
         valdir,
         transforms.Compose([
-            transforms.CenterCrop(204),
-         #   transforms.RandomHorizontalFlip(),
+            CenterCrop(204),
             transforms.ToTensor(),
         ]))
 
@@ -105,11 +102,13 @@ validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
 model = NeuralNetwork(5).to(device)
 print(model)
 
-
 import torch.optim as optim
 
-criterion = nn.BCEWithLogitsLoss() # This combines Sigmoid and BCE
-optimizer = optim.Adam(model.parameters(), lr=LR)
+# criterion = nn.Cross() # This combines Sigmoid and BCE
+# optimizer = optim.Adam(model.parameters(), lr=LR)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, nesterov=True, weight_decay=0.0001)
 
 """### Trainning"""
 
@@ -125,16 +124,16 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     for i, data in enumerate(trainloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
-        inputs = torch.reshape(inputs, (inputs.shape[0], 3, 204, 204))
+        inputs = inputs.transpose((0, 2, 1, 3))
         labels = torch.reshape(labels, (-1,1))
 
         # Convert to float
         if device == "cpu":
             inputs = inputs.float()
-            labels = labels.float()
+            labels = labels.long()
         else:
             inputs = inputs.float().to(device)
-            labels = labels.float().to(device)
+            labels = labels.long().to(device)
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -152,7 +151,6 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
             print('[%d, %5d] loss: %.6f' %
                   (epoch + 1, i + 1, train_loss / i))
 
-
     # Validation
     tp = 0.0
     tn = 0.0
@@ -162,18 +160,19 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     model.eval()     # Optional when not using Model Specific layer
     for i, data in enumerate(validloader, 0):
         inputs, labels = data
-        inputs = torch.reshape(inputs, (inputs.shape[0], 3, 204, 204))
+        inputs = inputs.transpose((0, 2, 1, 3))
         labels = torch.reshape(labels, (-1,1))
 
         # Convert to float
         if device == "cpu":
             inputs = inputs.float()
-            labels = labels.float()
+            labels = labels.long()
         else:
             inputs = inputs.float().to(device)
-            labels = labels.float().to(device)
+            labels = labels.long().to(device)
             
-        target = nn.Sigmoid()(model(inputs))
+        target = model(inputs)
+        target = torch.argmax(target, dim=1)
         # loss = criterion(target,labels)
         tp += (labels * target).sum(dim=0).to(torch.float32).item()
         tn += ((1 - labels) * (1 - target)).sum(dim=0).to(torch.float32).item()

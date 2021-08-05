@@ -42,7 +42,7 @@ class NeuralNetwork(nn.Module):
             nn.Conv2d(in_channels=3, out_channels=26, kernel_size=3),
             nn.MaxPool2d(2, stride=2))
         self.end = nn.Sequential(
-            nn.BatchNorm2d((2+3*5)*13),
+            nn.BatchNorm2d((2+3*self.num_dense)*13),
             nn.AvgPool2d(kernel_size=2, stride=2),
         )
         for i in range(self.num_dense):
@@ -50,12 +50,13 @@ class NeuralNetwork(nn.Module):
             self.initial.add_module('denseblock%d' % (i + 1), block)
 
         # not sure what the input dimension is
-        self.fc = nn.Linear(221, 1)
+        self.fc = nn.Linear(221, 2)
 
     def forward(self, x):
-        out = self.initial(x)
+        out = self.initial(x)                   # First section of the model 
+                                                # including number of blocks
 
-        out = self.end(out)
-        out = torch.flatten(out, 1)
-        out = self.fc(out)
+        out = self.end(out)                     # Last section of the model
+        out = torch.flatten(out, 1)              # Convert 2d to 1d 
+        out = self.fc(out)                     # Fully connected layer
         return out
