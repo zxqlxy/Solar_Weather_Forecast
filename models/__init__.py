@@ -1,1 +1,1 @@
-from .neural_net import NeuralNetwork
+from .densenet import NeuralNetwork

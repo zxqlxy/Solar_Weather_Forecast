@@ -124,7 +124,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     for i, data in enumerate(trainloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
-        inputs = inputs.transpose((0, 2, 1, 3))
+        inputs = inputs.transpose(1, 2)
         labels = torch.reshape(labels, (-1,1))
 
         # Convert to float
@@ -160,7 +160,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     model.eval()     # Optional when not using Model Specific layer
     for i, data in enumerate(validloader, 0):
         inputs, labels = data
-        inputs = inputs.transpose((0, 2, 1, 3))
+        inputs = inputs.transpose(1, 2)
         labels = torch.reshape(labels, (-1,1))
 
         # Convert to float
