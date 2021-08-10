@@ -125,7 +125,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
         inputs = inputs.transpose(1, 2)
-        labels = torch.reshape(labels, (-1,1))
+        labels = torch.reshape(labels, (-1, ))
 
         # Convert to float
         if device == "cpu":
@@ -161,7 +161,7 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     for i, data in enumerate(validloader, 0):
         inputs, labels = data
         inputs = inputs.transpose(1, 2)
-        labels = torch.reshape(labels, (-1,1))
+        labels = torch.reshape(labels, (-1,))
 
         # Convert to float
         if device == "cpu":
