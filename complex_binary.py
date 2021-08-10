@@ -31,7 +31,7 @@ args = parser.parse_args()
 
 print(args)
 
-base = "/scratch/xl73/"
+base = "/scratch/xl73/solar_dataset"
 LR = args.lr
 
 """ Check Device
@@ -73,7 +73,7 @@ if device == 'cuda' and args.use_benchmark:
 import torchvision.transforms as transforms
 
 traindir = base + 'train'
-valdir = base + 'val'
+valdir = base + 'valid'
 
 train_dataset = ImageFolder(
         traindir,
