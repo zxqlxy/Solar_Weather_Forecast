@@ -1,1 +1,1 @@
-from .transforms import CenterCrop
+from .transforms import CenterCrop, ToTensor
