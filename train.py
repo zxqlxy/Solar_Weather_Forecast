@@ -80,7 +80,7 @@ if args.all_data:
     val_size = len(dataset) - train_size
 
     print(len(dataset), train_size, val_size)
-    solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
+    train_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
 
     del flare.f
     del n_flare.f
