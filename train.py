@@ -72,20 +72,20 @@ if args.all_data:
     from torch.utils.data import Dataset, DataLoader, random_split
 
 
-    data1 = np.load(base + 'maps_256_6800_flares.npz')
-    data2 = np.load(base + 'maps_256_7000_non_flares.npz')
+    flare = np.load(base + 'maps_256_818_flares.npz')
+    n_flare = np.load(base + 'maps_256_818_non_flares_test.npz')
 
-    dataset = SolarData(data1 = data1, data2 = data2)
+    dataset = SolarData(data1 = flare, data2 = n_flare)
     train_size = len(dataset) * 4 // 5
     val_size = len(dataset) - train_size
 
     print(len(dataset), train_size, val_size)
     solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
 
-    del data1.f
-    del data2.f
-    data1.close()
-    data2.close()
+    del flare.f
+    del n_flare.f
+    flare.close()
+    n_flare.close()
 
 else:
     import torchvision.transforms as transforms
