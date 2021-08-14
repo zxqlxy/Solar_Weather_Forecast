@@ -69,8 +69,8 @@ os.environ['PYTHONHASHSEED'] = str(seed)
 1.   Create customized dataset 
 
 """
-print("use all data", args.all_data)
-if not args.all_data:
+print("use all data", args.data)
+if not args.data:
     from torch.utils.data import Dataset, DataLoader, random_split
 
 
