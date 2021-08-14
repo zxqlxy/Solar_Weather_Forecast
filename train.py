@@ -17,8 +17,7 @@ import argparse
 
 from models import NeuralNetwork
 from utils import ImageFolder
-from transforms import CenterCrop
-# from metrics import F1, TSS
+from transforms import CenterCrop, ToTensor
 
 parser = argparse.ArgumentParser(description='complex_binary')
 parser.add_argument('--epoch', type=int, default=50, help='number of epoches')
@@ -41,9 +40,20 @@ LR = args.lr
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('Using {} device'.format(device))
 
-# Use bench mark to accelerate the training
-if device == 'cuda' and args.use_benchmark:
-    torch.backends.cudnn.benchmark = True
+# # Use bench mark to accelerate the training
+# if device == 'cuda' and args.use_benchmark:
+#     torch.backends.cudnn.benchmark = True
+
+""" Set Seed
+"""
+seed = 200
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+np.random.seed(seed)
+os.environ['PYTHONHASHSEED'] = str(seed)
+
 
 """### Load Data
 
@@ -79,13 +89,13 @@ train_dataset = ImageFolder(
         traindir,
         transforms.Compose([
             CenterCrop(204),
-            transforms.ToTensor(),
+            ToTensor(),
         ]))
 valid_dataset = ImageFolder(
         valdir,
         transforms.Compose([
             CenterCrop(204),
-            transforms.ToTensor(),
+            ToTensor(),
         ]))
 
 trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=64,
@@ -128,12 +138,8 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
         labels = torch.reshape(labels, (-1, ))
 
         # Convert to float
-        if device == "cpu":
-            inputs = inputs.float()
-            labels = labels.long()
-        else:
-            inputs = inputs.float().to(device)
-            labels = labels.long().to(device)
+        inputs = inputs.float().to(device)
+        labels = labels.long().to(device)
 
         # zero the parameter gradients
         optimizer.zero_grad()
@@ -164,12 +170,8 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
         labels = torch.reshape(labels, (-1,))
 
         # Convert to float
-        if device == "cpu":
-            inputs = inputs.float()
-            labels = labels.long()
-        else:
-            inputs = inputs.float().to(device)
-            labels = labels.long().to(device)
+        inputs = inputs.float().to(device)
+        labels = labels.long().to(device)
             
         target = model(inputs)
         target = torch.argmax(target, dim=1)
@@ -187,7 +189,8 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
 
     f1 = 2 * (precision*recall) / (precision + recall + epsilon)
     tss = tp / (tp + fn + epsilon) - fp / (fp + tn + epsilon)
-    acc = (tp + tn) / (tp + tn + fp + fn)
+    acc = (tp + tn) / (tp + tn + fp + fn)    
+    print(tp, tn, fp, fn)
     print(f'Epoch {epoch+1} \t Training Loss: {train_loss / len(trainloader)} \t F1: {f1 } \t TSS: {tss} \t Accuracy: {acc}')
     
     train_loss_list.append(train_loss)

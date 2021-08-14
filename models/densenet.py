@@ -27,7 +27,7 @@ class DenseBlock(nn.Module):
         out = self.relu2(out)
         out = self.conv2(out)
 
-        # out += identity
+        # out += identity   # this is for resnet
         out = torch.cat((out, identity), dim=1)
 
         out = self.pool(out)
