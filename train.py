@@ -26,6 +26,7 @@ parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--batch_size', type=int, default=32, help='training batch size')
 parser.add_argument('--base', type=str, default='', help='Dataset loc')
 parser.add_argument('--seed', type=int, default=200, help='Seed number')
+parser.add_argument('--all_data', type=bool, default=True, help='Whether to use all data')
 # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
 parser.add_argument('--use_benchmark', dest='use_benchmark', default=True, help='use benchmark')
 # parser.add_argument('--exp_name', type=str, default='cudnn_test', help='output file name')
@@ -67,42 +68,43 @@ os.environ['PYTHONHASHSEED'] = str(seed)
 
 """
 
-# from torch.utils.data import Dataset, DataLoader, random_split
+if args.all_data:
+    from torch.utils.data import Dataset, DataLoader, random_split
 
 
-# data1 = np.load(base + 'maps_256_6800_flares.npz')
-# data2 = np.load(base + 'maps_256_7000_non_flares.npz')
+    data1 = np.load(base + 'maps_256_6800_flares.npz')
+    data2 = np.load(base + 'maps_256_7000_non_flares.npz')
 
-# dataset = SolarData(data1 = data1, data2 = data2)
-# train_size = len(dataset) * 4 // 5
-# val_size = len(dataset) - train_size
+    dataset = SolarData(data1 = data1, data2 = data2)
+    train_size = len(dataset) * 4 // 5
+    val_size = len(dataset) - train_size
 
-# print(len(dataset), train_size, val_size)
-# solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
+    print(len(dataset), train_size, val_size)
+    solar_dataset, valid_dataset = random_split(dataset, [train_size, val_size])
 
-# del data1.f
-# del data2.f
-# data1.close()
-# data2.close()
+    del data1.f
+    del data2.f
+    data1.close()
+    data2.close()
 
+else:
+    import torchvision.transforms as transforms
 
-import torchvision.transforms as transforms
+    traindir = base + "solar_dataset/" + 'train'
+    valdir = base + "solar_dataset/" + 'valid'
 
-traindir = base + 'train'
-valdir = base + 'valid'
-
-train_dataset = ImageFolder(
-        traindir,
-        transforms.Compose([
-            CenterCrop(204),
-            ToTensor(),
-        ]))
-valid_dataset = ImageFolder(
-        valdir,
-        transforms.Compose([
-            CenterCrop(204),
-            ToTensor(),
-        ]))
+    train_dataset = ImageFolder(
+            traindir,
+            transforms.Compose([
+                CenterCrop(204),
+                ToTensor(),
+            ]))
+    valid_dataset = ImageFolder(
+            valdir,
+            transforms.Compose([
+                CenterCrop(204),
+                ToTensor(),
+            ]))
 
 trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=64,
                                           shuffle=True, num_workers=2, pin_memory=True)
@@ -111,8 +113,7 @@ validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
 
 
 
-"""### Create Model
-
+""" Create Model
 """
 
 model = NeuralNetwork(5).to(device)
@@ -130,7 +131,7 @@ import torch.optim as optim
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=0.0001, momentum=0.9, nesterov=True, weight_decay=0.0001)
 
-"""### Trainning"""
+"""Trainning"""
 
 min_valid_loss = -np.inf
 EPOCH = args.epoch

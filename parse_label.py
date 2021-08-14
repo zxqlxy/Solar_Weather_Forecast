@@ -2,6 +2,9 @@
 Parse label file according to xrayfmt.txt
 label is available at https://www.ngdc.noaa.gov/stp/space-weather/solar-data/solar-features/solar-flares/x-rays/goes/xrs
 for data untill 2017
+
+Another Source:
+Hinode: https://hinode.isee.nagoya-u.ac.jp/flare_catalogue/
 """
 
 import csv
