@@ -18,11 +18,14 @@ import argparse
 from models import NeuralNetwork
 from utils import ImageFolder
 from transforms import CenterCrop, ToTensor
+from datasets import SolarData
 
 parser = argparse.ArgumentParser(description='complex_binary')
 parser.add_argument('--epoch', type=int, default=50, help='number of epoches')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--batch_size', type=int, default=32, help='training batch size')
+parser.add_argument('--base', type=str, default='', help='Dataset loc')
+parser.add_argument('--seed', type=int, default=200, help='Seed number')
 # parser.add_argument('--use_gpu', dest='use_gpu', action='store_true', default=True, help='use gpu')
 parser.add_argument('--use_benchmark', dest='use_benchmark', default=True, help='use benchmark')
 # parser.add_argument('--exp_name', type=str, default='cudnn_test', help='output file name')
@@ -30,7 +33,10 @@ args = parser.parse_args()
 
 print(args)
 
-base = "/scratch/xl73/solar_dataset"
+# "/scratch/xl73/solar_dataset"
+base = args.base 
+if not base:
+    print("please provide a valid base")
 LR = args.lr
 
 """ Check Device
@@ -46,7 +52,7 @@ print('Using {} device'.format(device))
 
 """ Set Seed
 """
-seed = 200
+seed = args.seed
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 torch.backends.cudnn.deterministic = True
@@ -110,7 +116,11 @@ validloader = torch.utils.data.DataLoader(valid_dataset, batch_size=128,
 """
 
 model = NeuralNetwork(5).to(device)
+
 print(model)
+
+# Calculate number of parameters
+print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 
 import torch.optim as optim
 

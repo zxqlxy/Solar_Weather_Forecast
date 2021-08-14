@@ -18,11 +18,11 @@ class SolarData(Dataset):
         self.tar = np.concatenate((data1["arr_1"], data2["arr_1"]), axis = 0)
 
         # Everything smaller than 0 is wrong
-        self.src[self.src <= 1] = 1
+        self.src[self.src <= 1.0] = 1.0
         if log:
             self.src = np.log(self.src)
         self.src = self.src.reshape(self.src.shape[0], 3, 256, 256)
-        self.tar = self.tar.reshape(self.tar.shape[0], 1)
+        self.tar = self.tar.reshape(self.tar.shape[0], )
 
         # CenterCrop
         self.src = self.src[:, :, 26:230, 26:230]
