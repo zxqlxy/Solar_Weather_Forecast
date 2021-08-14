@@ -67,8 +67,8 @@ os.environ['PYTHONHASHSEED'] = str(seed)
 1.   Create customized dataset 
 
 """
-
-if args.all_data:
+print("use all data", args.all_data)
+if not args.all_data:
     from torch.utils.data import Dataset, DataLoader, random_split
 
 
@@ -145,7 +145,6 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     for i, data in enumerate(trainloader, 0):
         # get the inputs; data is a list of [inputs, labels]
         inputs, labels = data
-        inputs = inputs.transpose(1, 2)
         labels = torch.reshape(labels, (-1, ))
 
         # Convert to float
@@ -177,7 +176,6 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
     model.eval()     # Optional when not using Model Specific layer
     for i, data in enumerate(validloader, 0):
         inputs, labels = data
-        inputs = inputs.transpose(1, 2)
         labels = torch.reshape(labels, (-1,))
 
         # Convert to float
