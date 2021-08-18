@@ -186,13 +186,10 @@ for epoch in range(EPOCH):  # loop over the dataset multiple times
             
         target = model(inputs)
         target = torch.argmax(target, dim=1)
-        # loss = criterion(target,labels)
         tp += (labels * target).sum(dim=0).to(torch.float32).item()
         tn += ((1 - labels) * (1 - target)).sum(dim=0).to(torch.float32).item()
         fp += ((1 - labels) * target).sum(dim=0).to(torch.float32).item()
         fn += (labels * (1 - target)).sum(dim=0).to(torch.float32).item()
-        # f1_loss += f1(target,labels).item()
-        # tss_loss += tss(target,labels).item()
         # valid_loss = loss.item() * inputs.size(0)
 
     precision = tp / (tp + fp + epsilon)

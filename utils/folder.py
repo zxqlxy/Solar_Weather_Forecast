@@ -47,7 +47,7 @@ def make_dataset(
     class_to_idx: Optional[Dict[str, int]] = None,
     extensions: Optional[Tuple[str, ...]] = None,
     is_valid_file: Optional[Callable[[str], bool]] = None,
-) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, int]]:
     """Generates a list of samples of a form (path_to_sample, class).
     See :class:`DatasetFolder` for details.
     Note: The class_to_idx parameter is here optional and will use the logic of the ``find_classes`` function
