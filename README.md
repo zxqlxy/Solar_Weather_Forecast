@@ -48,6 +48,8 @@ Otherwise, use AWS or other clouding computing platform for GPU acceleration.
 python train.py
 ```
 
+The trained model is at `saved_model.pth`.
+
 ## Grad-CAM
 
 Visualize the heatmap of the last of the convolution layer. It is the activation of the images when
